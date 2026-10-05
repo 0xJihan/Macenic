@@ -23,7 +23,6 @@ struct AudioSwitcherView: View {
             }
             .padding(.vertical, 8)
         }
-        .frame(height: 440)
         .onAppear { service.refresh() }
     }
 

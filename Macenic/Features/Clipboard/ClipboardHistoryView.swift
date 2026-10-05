@@ -1,8 +1,12 @@
 import SwiftUI
+import AppKit
 
 struct ClipboardHistoryView: View {
     @Bindable var service: ClipboardService
-    var hotKey: HotKeyService? = nil
+    var hotKey: HotKeyService?
+
+    @State private var copiedItemID: UUID?
+    @State private var copiedFeedbackText: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -15,12 +19,9 @@ struct ClipboardHistoryView: View {
                 itemsList
             }
 
-            if !service.items.isEmpty {
-                Divider()
-                bottomBar
-            }
+            Divider()
+            bottomBar
         }
-        .frame(height: 440)
     }
 
     private var searchBar: some View {
@@ -30,14 +31,25 @@ struct ClipboardHistoryView: View {
                 .foregroundStyle(.secondary)
             TextField("Search clipboard...", text: $service.searchQuery)
                 .textFieldStyle(.plain)
-                .font(.system(size: 12))
+                .font(.system(size: 11))
+
+            if !service.searchQuery.isEmpty {
+                Button {
+                    service.searchQuery = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(.quaternary.opacity(0.35))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(.quaternary.opacity(0.3))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .padding(.horizontal, 12)
-        .padding(.top, 8)
+        .padding(.top, 6)
         .padding(.bottom, 4)
     }
 
@@ -64,21 +76,21 @@ struct ClipboardHistoryView: View {
             if hotKey.isRecording {
                 hotKey.cancelRecording()
             } else {
-                hotKey.startRecording()
+                hotKey.startRecording(for: .clipboard)
             }
         }) {
             HStack(spacing: 4) {
                 Image(systemName: "keyboard")
-                    .font(.system(size: 10))
+                    .font(.system(size: 9))
                 Text(hotKey.isRecording ? "Press keys..." : hotKey.currentShortcut.displayString)
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
             }
             .foregroundStyle(hotKey.isRecording ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
             .background(
                 RoundedRectangle(cornerRadius: 5)
-                    .fill(hotKey.isRecording ? AnyShapeStyle(.tint.opacity(0.1)) : AnyShapeStyle(.quaternary))
+                    .fill(hotKey.isRecording ? AnyShapeStyle(.tint.opacity(0.12)) : AnyShapeStyle(.quaternary.opacity(0.4)))
             )
         }
         .buttonStyle(.plain)
@@ -91,13 +103,30 @@ struct ClipboardHistoryView: View {
                 ForEach(service.filteredItems) { item in
                     ClipboardItemRow(
                         item: item,
-                        onTap: { service.copyToClipboard(item) },
+                        isCopied: copiedItemID == item.id,
+                        onTap: {
+                            service.copyToClipboard(item)
+                            withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
+                                copiedItemID = item.id
+                                copiedFeedbackText = "Copied to clipboard"
+                            }
+                            NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .default)
+
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                                withAnimation(.easeOut(duration: 0.2)) {
+                                    if copiedItemID == item.id {
+                                        copiedItemID = nil
+                                        copiedFeedbackText = nil
+                                    }
+                                }
+                            }
+                        },
                         onPin: { service.togglePin(item) },
                         onDelete: { service.delete(item) }
                     )
                 }
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, 8)
             .padding(.vertical, 4)
         }
     }
@@ -117,26 +146,39 @@ struct ClipboardHistoryView: View {
 
     private var bottomBar: some View {
         HStack {
-            Button(action: { service.clearUnpinned() }) {
+            if let feedback = copiedFeedbackText {
                 HStack(spacing: 4) {
-                    Image(systemName: "trash")
+                    Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 10))
-                    Text("Clear Unpinned")
-                        .font(.system(size: 11))
+                        .foregroundStyle(.green)
+                    Text(feedback)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.green)
                 }
-                .foregroundStyle(.secondary)
+                .transition(.opacity)
+            } else {
+                Button(action: { service.clearUnpinned() }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 9))
+                        Text("Clear Unpinned")
+                            .font(.system(size: 10))
+                    }
+                    .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
 
             Spacer()
 
             if let hotKey {
                 Text(hotKey.currentShortcut.displayString)
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.tertiary)
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
+        .background(.quaternary.opacity(0.15))
     }
 }

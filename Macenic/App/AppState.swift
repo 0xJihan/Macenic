@@ -23,23 +23,45 @@ private class FloatingPanel: NSPanel {
 @Observable
 final class AppState {
     let systemMonitor = SystemMonitorService()
+    let networkMonitor = NetworkMonitorService()
+    let batteryHealth = BatteryHealthService()
+    let storageMonitor = StorageMonitorService()
+    let processManager = ProcessManagerService()
+    let windowManager = WindowManagerService()
+    let devToolkit = DevToolkitService()
     let clipboard = ClipboardService()
     let audio = AudioService()
     let updates = AppUpdateService()
     let keepAwake = KeepAwakeService()
     let keyboardCleaner = KeyboardCleanerService()
     let hotKey = HotKeyService()
+    let accessibility = AccessibilityService.shared
 
     @ObservationIgnored private var hudWindow: NSPanel?
     @ObservationIgnored private var escMonitor: Any?
 
     init() {
         systemMonitor.start()
+        networkMonitor.start()
+        batteryHealth.start()
+        storageMonitor.start()
         clipboard.start()
         audio.refresh()
 
         hotKey.onHotKey = { [weak self] in
             self?.toggleClipboardHUD()
+        }
+        hotKey.onSnapLeft = { [weak self] in
+            self?.windowManager.snap(.leftHalf)
+        }
+        hotKey.onSnapRight = { [weak self] in
+            self?.windowManager.snap(.rightHalf)
+        }
+        hotKey.onMaximize = { [weak self] in
+            self?.windowManager.snap(.maximize)
+        }
+        hotKey.onRestore = { [weak self] in
+            self?.windowManager.snap(.restore)
         }
         hotKey.register()
 

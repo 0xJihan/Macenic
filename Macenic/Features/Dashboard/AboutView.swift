@@ -12,7 +12,7 @@ struct AboutView: View {
                 Text("Macenic")
                     .font(.system(size: 18, weight: .bold))
 
-                Text("Version 1.0")
+                Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.1")")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }

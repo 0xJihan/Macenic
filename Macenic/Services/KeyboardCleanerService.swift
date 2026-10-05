@@ -47,76 +47,33 @@ final class KeyboardCleanerService {
     @ObservationIgnored private var cleanerWindow: NSWindow?
     @ObservationIgnored private var exitTimer: Timer?
     @ObservationIgnored private var runLoopSource: CFRunLoopSource?
-    @ObservationIgnored private var permissionPollTimer: Timer?
     @ObservationIgnored private var pendingDuration: Int = 30
 
     static var hasPermission: Bool {
-        AXIsProcessTrusted()
+        AccessibilityService.shared.isTrusted
     }
 
     func activate(duration: Int = 30) {
         guard !isActive else { return }
 
-        if !Self.hasPermission {
-            permissionDenied = false
+        if !AccessibilityService.shared.isTrusted {
+            permissionDenied = true
             pendingDuration = duration
             openAccessibilitySettings()
             return
         }
 
         permissionDenied = false
-        stopPermissionPolling()
         startCleaner(duration: duration)
     }
 
     func openAccessibilitySettings() {
-        stopPermissionPolling()
-        triggerPermissionFlow()
-
-        let urls = [
-            "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility",
-            "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
-        ]
-
-        var opened = false
-        for string in urls {
-            if let url = URL(string: string), NSWorkspace.shared.open(url) {
-                opened = true
-                break
-            }
-        }
-
-        if !opened {
-            NSWorkspace.shared.open(
-                URL(fileURLWithPath: "/System/Applications/System Settings.app")
-            )
-        }
-
-        startPermissionPolling()
-    }
-
-    private func triggerPermissionFlow() {
-        let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
-        let options = [key: true] as CFDictionary
-        AXIsProcessTrustedWithOptions(options)
-        startPermissionPolling()
-    }
-
-    private func startPermissionPolling() {
-        stopPermissionPolling()
-        permissionPollTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+        AccessibilityService.shared.openAccessibilitySettings()
+        AccessibilityService.shared.checkAndPrompt { [weak self] in
             guard let self else { return }
-            if Self.hasPermission {
-                self.permissionDenied = false
-                self.stopPermissionPolling()
-                self.activate(duration: self.pendingDuration)
-            }
+            self.permissionDenied = false
+            self.activate(duration: self.pendingDuration)
         }
-    }
-
-    private func stopPermissionPolling() {
-        permissionPollTimer?.invalidate()
-        permissionPollTimer = nil
     }
 
     private func startCleaner(duration: Int) {

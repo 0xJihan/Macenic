@@ -43,7 +43,6 @@ struct SystemMonitorView: View {
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity)
         }
-        .frame(height: 440)
     }
 
     private var networkSection: some View {

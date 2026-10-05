@@ -82,7 +82,6 @@ struct QuickTogglesView: View {
             Spacer()
         }
         .padding(.vertical, 8)
-        .frame(height: 440)
     }
 
     private func toggleRow(
