@@ -12,7 +12,7 @@ struct AboutView: View {
                 Text("Macenic")
                     .font(.system(size: 18, weight: .bold))
 
-                Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.1")")
+                Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "2.0.0")")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
@@ -25,7 +25,7 @@ struct AboutView: View {
                 Text("Developed by")
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
-                Text("Md Rahadul Islam")
+                Text("Jihan Khan")
                     .font(.system(size: 13, weight: .semibold))
             }
 
@@ -34,9 +34,9 @@ struct AboutView: View {
                 .padding(.horizontal, 24)
 
             VStack(spacing: 8) {
-                linkButton(icon: "envelope", title: "apkrahad@gmail.com", url: "mailto:apkrahad@gmail.com")
-                linkButton(icon: "globe", title: "rahadul.com", url: "https://rahadul.com/")
-                linkButton(icon: "chevron.left.forwardslash.chevron.right", title: "github.com/0xRahad", url: "https://github.com/0xRahad")
+                linkButton(icon: "envelope", title: "jihankhan966@gmail.com", url: "mailto:jihankhan966@gmail.com")
+                linkButton(icon: "globe", title: "jihankhan.netlify.app", url: "https://jihankhan.netlify.app/")
+                linkButton(icon: "chevron.left.forwardslash.chevron.right", title: "github.com/0xJihan", url: "https://github.com/0xJihan")
             }
             .padding(.horizontal, 24)
 
@@ -45,7 +45,7 @@ struct AboutView: View {
                 .padding(.horizontal, 24)
 
             Button {
-                if let url = URL(string: "https://www.supportkori.com/apkrahad") {
+                if let url = URL(string: "https://www.supportkori.com/0xJihan") {
                     NSWorkspace.shared.open(url)
                 }
             } label: {
