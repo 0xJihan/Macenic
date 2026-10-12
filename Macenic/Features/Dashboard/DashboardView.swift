@@ -39,7 +39,6 @@ enum SystemSubtab: String, CaseIterable, Identifiable {
 }
 
 enum ControlsSubtab: String, CaseIterable, Identifiable {
-    case clipboard = "Clipboard"
     case audio = "Audio"
     case toggles = "Toggles"
 
@@ -47,7 +46,6 @@ enum ControlsSubtab: String, CaseIterable, Identifiable {
 
     var icon: String {
         switch self {
-        case .clipboard: return "clipboard"
         case .audio: return "speaker.wave.2"
         case .toggles: return "switch.2"
         }
@@ -58,7 +56,7 @@ struct DashboardView: View {
     @Environment(AppState.self) private var appState
     @State private var selectedTab: DashboardTab = .system
     @State private var selectedSystemSubtab: SystemSubtab = .overview
-    @State private var selectedControlsSubtab: ControlsSubtab = .clipboard
+    @State private var selectedControlsSubtab: ControlsSubtab = .audio
 
     var body: some View {
         VStack(spacing: 0) {
@@ -72,6 +70,7 @@ struct DashboardView: View {
             footer
         }
         .frame(width: 380)
+        .glassmorphic(opacity: appState.appearance.glassOpacity, cornerRadius: 16)
         .alert(
             "Version \(appState.updates.latestVersion) available",
             isPresented: updateAlertPresented
@@ -173,8 +172,6 @@ struct DashboardView: View {
                 Divider()
 
                 switch selectedControlsSubtab {
-                case .clipboard:
-                    ClipboardHistoryView(service: appState.clipboard, hotKey: appState.hotKey)
                 case .audio:
                     AudioSwitcherView(service: appState.audio)
                 case .toggles:
@@ -225,6 +222,19 @@ struct DashboardView: View {
 
     private var footer: some View {
         HStack(spacing: 12) {
+            Button {
+                showSettingsWindow()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 10))
+                    Text("Settings")
+                        .font(.system(size: 11))
+                }
+                .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+
             Button {
                 showAboutWindow()
             } label: {
@@ -328,5 +338,36 @@ struct DashboardView: View {
         NSApp.activate(ignoringOtherApps: true)
 
         Self.aboutWindow = window
+    }
+
+    private static weak var settingsWindow: NSWindow?
+
+    private func showSettingsWindow() {
+        if let existing = Self.settingsWindow, existing.isVisible {
+            existing.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let settingsView = SettingsView().environment(appState)
+        let hostingView = NSHostingView(rootView: settingsView)
+        hostingView.frame = NSRect(x: 0, y: 0, width: 320, height: 420)
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 320, height: 420),
+            styleMask: [.titled, .closable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentView = hostingView
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.isMovableByWindowBackground = true
+        window.center()
+        window.isReleasedWhenClosed = false
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+
+        Self.settingsWindow = window
     }
 }

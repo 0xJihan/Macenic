@@ -12,5 +12,13 @@ struct MacenicApp: App {
             Image("MenuBarIcon")
         }
         .menuBarExtraStyle(.window)
+
+        MenuBarExtra {
+            ClipboardMenuBarView(service: appState.clipboard, hotKey: appState.hotKey)
+                .environment(appState)
+        } label: {
+            Image(systemName: "clipboard")
+        }
+        .menuBarExtraStyle(.window)
     }
 }

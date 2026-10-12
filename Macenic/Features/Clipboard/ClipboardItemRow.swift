@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct ClipboardItemRow: View {
     let item: ClipboardItem
@@ -8,15 +9,17 @@ struct ClipboardItemRow: View {
     let onTap: () -> Void
     let onPin: () -> Void
     let onDelete: () -> Void
+    var onHover: ((Bool, NSRect) -> Void)? = nil
 
     @State private var isHovered = false
+    @State private var screenRect: NSRect = .zero
 
     var body: some View {
         HStack(spacing: 8) {
             if let index, index < 9 {
                 Text("\(index + 1)")
-                    .font(.system(size: 9, weight: .medium, design: .monospaced))
-                    .foregroundStyle(.tertiary)
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundStyle(isSelected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.tertiary))
                     .frame(width: 14)
             }
 
@@ -39,9 +42,15 @@ struct ClipboardItemRow: View {
                 .transition(.scale.combined(with: .opacity))
             } else {
                 Button(action: onPin) {
-                    Image(systemName: item.isPinned ? "pin.fill" : "pin")
-                        .font(.system(size: 10))
-                        .foregroundStyle(item.isPinned ? .orange : .secondary)
+                    if item.isPinned {
+                        Image(systemName: "pin.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.orange)
+                    } else {
+                        Image(systemName: "pin")
+                            .font(.system(size: 10))
+                            .foregroundStyle(isHovered ? .secondary : .tertiary)
+                    }
                 }
                 .buttonStyle(.plain)
                 .help(item.isPinned ? "Unpin item" : "Pin item to keep")
@@ -49,7 +58,7 @@ struct ClipboardItemRow: View {
                 Button(action: onDelete) {
                     Image(systemName: "xmark")
                         .font(.system(size: 9))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(isHovered ? .secondary : .tertiary)
                 }
                 .buttonStyle(.plain)
                 .help("Delete item")
@@ -59,8 +68,16 @@ struct ClipboardItemRow: View {
         .padding(.vertical, 7)
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
-        .help("Click to copy to clipboard")
-        .onHover { isHovered = $0 }
+        .help("Click to select / copy")
+        .background(
+            ScreenFrameReader { rect in
+                screenRect = rect
+            }
+        )
+        .onHover { hovering in
+            isHovered = hovering
+            onHover?(hovering, screenRect)
+        }
         .background(
             RoundedRectangle(cornerRadius: 6)
                 .fill(backgroundFill)
@@ -71,6 +88,7 @@ struct ClipboardItemRow: View {
         )
         .animation(.easeInOut(duration: 0.15), value: isCopied)
         .animation(.easeInOut(duration: 0.1), value: isHovered)
+        .animation(.easeInOut(duration: 0.1), value: isSelected)
     }
 
     private var backgroundFill: AnyShapeStyle {
@@ -78,7 +96,7 @@ struct ClipboardItemRow: View {
             return AnyShapeStyle(Color.green.opacity(0.12))
         }
         if isSelected {
-            return AnyShapeStyle(Color.accentColor.opacity(0.15))
+            return AnyShapeStyle(Color.accentColor.opacity(0.18))
         }
         if isHovered {
             return AnyShapeStyle(Color.primary.opacity(0.06))
@@ -91,10 +109,10 @@ struct ClipboardItemRow: View {
             return Color.green.opacity(0.4)
         }
         if isSelected {
-            return Color.accentColor.opacity(0.35)
+            return Color.accentColor.opacity(0.4)
         }
         if isHovered {
-            return Color.primary.opacity(0.1)
+            return Color.primary.opacity(0.12)
         }
         return Color.clear
     }
@@ -104,10 +122,10 @@ struct ClipboardItemRow: View {
         switch item.content {
         case .text(let string):
             Text(string.trimmingCharacters(in: .whitespacesAndNewlines))
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 11, weight: isSelected ? .semibold : .medium))
                 .lineLimit(1)
                 .truncationMode(.tail)
-                .foregroundStyle(.primary)
+                .foregroundStyle(isSelected ? .primary : .primary)
         case .image(let image):
             HStack(spacing: 6) {
                 Image(nsImage: image)
@@ -121,6 +139,42 @@ struct ClipboardItemRow: View {
                         .foregroundStyle(.secondary)
                 }
             }
+        }
+    }
+}
+
+private struct ScreenFrameReader: NSViewRepresentable {
+    var onChange: (NSRect) -> Void
+
+    func makeNSView(context: Context) -> FrameReaderNSView {
+        let view = FrameReaderNSView()
+        view.onChange = onChange
+        return view
+    }
+
+    func updateNSView(_ nsView: FrameReaderNSView, context: Context) {
+        nsView.onChange = onChange
+        nsView.report()
+    }
+
+    final class FrameReaderNSView: NSView {
+        var onChange: ((NSRect) -> Void)?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            report()
+        }
+
+        override func layout() {
+            super.layout()
+            report()
+        }
+
+        func report() {
+            guard let window else { return }
+            let rectInWindow = convert(bounds, to: nil)
+            let rectOnScreen = window.convertToScreen(rectInWindow)
+            onChange?(rectOnScreen)
         }
     }
 }

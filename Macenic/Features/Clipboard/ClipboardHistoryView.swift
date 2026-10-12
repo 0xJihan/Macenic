@@ -22,6 +22,9 @@ struct ClipboardHistoryView: View {
             Divider()
             bottomBar
         }
+        .onDisappear {
+            ClipboardPreviewController.shared.hideImmediately()
+        }
     }
 
     private var searchBar: some View {
@@ -98,36 +101,61 @@ struct ClipboardHistoryView: View {
     }
 
     private var itemsList: some View {
-        ScrollView {
-            LazyVStack(spacing: 4) {
-                ForEach(service.filteredItems) { item in
-                    ClipboardItemRow(
-                        item: item,
-                        isCopied: copiedItemID == item.id,
-                        onTap: {
-                            service.copyToClipboard(item)
-                            withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
-                                copiedItemID = item.id
-                                copiedFeedbackText = "Copied to clipboard"
-                            }
-                            NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .default)
+        ScrollViewReader { proxy in
+            ScrollView {
+                Color.clear
+                    .frame(height: 0)
+                    .id("CLIPBOARD_HISTORY_TOP")
 
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                                withAnimation(.easeOut(duration: 0.2)) {
-                                    if copiedItemID == item.id {
-                                        copiedItemID = nil
-                                        copiedFeedbackText = nil
+                LazyVStack(spacing: 4) {
+                    ForEach(service.filteredItems) { item in
+                        ClipboardItemRow(
+                            item: item,
+                            isCopied: copiedItemID == item.id,
+                            onTap: {
+                                service.copyToClipboard(item)
+                                withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
+                                    copiedItemID = item.id
+                                    copiedFeedbackText = "Copied to clipboard"
+                                }
+                                NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .default)
+
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                                    withAnimation(.easeOut(duration: 0.2)) {
+                                        if copiedItemID == item.id {
+                                            copiedItemID = nil
+                                            copiedFeedbackText = nil
+                                        }
                                     }
                                 }
+                            },
+                            onPin: { service.togglePin(item) },
+                            onDelete: {
+                                service.delete(item)
+                                ClipboardPreviewController.shared.hideImmediately()
+                            },
+                            onHover: { hovering, rect in
+                                if hovering {
+                                    ClipboardPreviewController.shared.scheduleShow(for: item, adjacentTo: rect)
+                                } else {
+                                    ClipboardPreviewController.shared.scheduleHide()
+                                }
                             }
-                        },
-                        onPin: { service.togglePin(item) },
-                        onDelete: { service.delete(item) }
-                    )
+                        )
+                        .id(item.id)
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+            }
+            .onAppear {
+                proxy.scrollTo("CLIPBOARD_HISTORY_TOP", anchor: .top)
+            }
+            .onChange(of: service.items.first?.id) { _, _ in
+                withAnimation(.easeOut(duration: 0.15)) {
+                    proxy.scrollTo("CLIPBOARD_HISTORY_TOP", anchor: .top)
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
         }
     }
 
