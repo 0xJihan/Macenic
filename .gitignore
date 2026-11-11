@@ -1,0 +1,27 @@
+# Xcode
+build/
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+
+# macOS
+.DS_Store
+*.swp
+*~
+
+# Swift Package Manager
+.build/
+Packages/
+Package.resolved
+
+# Archives
+*.xcarchive
+
+# Code Signing
+*.mobileprovision
+*.p12
+
+# App
+*.app
+*.ipa
